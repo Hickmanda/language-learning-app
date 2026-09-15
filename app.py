@@ -25,6 +25,9 @@ from data.lessons import LESSON_CATEGORIES
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
+# Ensure JSON responses keep non-ASCII characters readable (Flask 2.3+)
+app.json.ensure_ascii = False
+
 # ============================================================
 # DATABASE CONFIGURATION
 # In production (Render), we use PostgreSQL via DATABASE_URL.
@@ -43,7 +46,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 # ============================================================
-# SPEECH LANGUAGES
+# SPEECH LANGUAGES — map 2-letter codes to BCP-47 tags for TTS
 # ============================================================
 SPEECH_LANGS = {
     "en": "en-US",
@@ -126,7 +129,7 @@ def login_required(f):
 
 
 # ============================================================
-# CONTEXT PROCESSOR
+# CONTEXT PROCESSOR — inject globals into every template
 # ============================================================
 @app.context_processor
 def inject_globals():
@@ -287,7 +290,7 @@ def add():
             base_language=request.form['base_language'],
         ))
         db.session.commit()
-        flash(f'"{word}" added to your cards! ✨', 'success')
+        flash(f'"{word}" added to your cards!', 'success')
         return redirect(url_for('index'))
     return render_template('add.html')
 
@@ -319,7 +322,7 @@ def quiz():
         if card and card.user_id == user.id and card.translation.lower() == answer:
             card.known = True
             db.session.commit()
-            flash('Correct! 🎉', 'success')
+            flash('Correct!', 'success')
             return redirect(url_for('quiz'))
 
         error = UI_TRANSLATIONS[session.get('ui_lang', 'en')]['wrong']
@@ -396,7 +399,7 @@ def add_from_bank():
             language=language, base_language=base_language
         ))
         db.session.commit()
-        flash(f'"{word}" added to your cards! ✨', 'success')
+        flash(f'"{word}" added to your cards!', 'success')
 
     return redirect(request.referrer or url_for('dictionary'))
 
@@ -406,7 +409,36 @@ def add_from_bank():
 # ============================================================
 @app.route('/courses')
 def courses():
-    return render_template('courses.html', courses=COURSES)
+    user = current_user()
+    progress = {}
+
+    if user:
+        # Get all words the user has marked as known (lowercase for matching)
+        known_words = set(
+            c.word.lower() for c in
+            Card.query.filter_by(user_id=user.id, known=True).all()
+        )
+
+        # For each course, count how many words the user knows
+        for course in COURSES:
+            total = 0
+            known = 0
+            target = course.get('target_lang', 'en')
+            for topic in course['topics']:
+                for w in topic['words']:
+                    total += 1
+                    word_value = w.get(target, '').lower()
+                    if word_value in known_words:
+                        known += 1
+            # Template expects a tuple: (known, total)
+            progress[course['id']] = (known, total)
+    else:
+        # Not logged in — show zeros
+        for course in COURSES:
+            total = sum(len(t['words']) for t in course['topics'])
+            progress[course['id']] = (0, total)
+
+    return render_template('courses.html', courses=COURSES, progress=progress)
 
 
 @app.route('/course/<course_id>')
@@ -569,9 +601,8 @@ def api_words():
 
 
 # ============================================================
-# ⚠️ TEMPORARY DEBUG ROUTES — REMOVE AFTER DEBUGGING ⚠️
+# TEMPORARY DEBUG ROUTES — REMOVE AFTER DEBUGGING
 # ============================================================
-
 @app.route('/debug/users')
 def debug_users():
     """Show all users in the database with their stored fields."""
