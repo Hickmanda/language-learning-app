@@ -600,7 +600,29 @@ def api_words():
     })
 
 
+# ============================================================
+# ⚠️ TEMPORARY ADMIN ROUTE — DELETE AFTER USE ⚠️
+# Deletes all users and all cards from the database.
+# Protected by a secret key that only you know.
+# ============================================================
+@app.route('/admin/cleanup/<secret>')
+def admin_cleanup(secret):
+    # Change this to a long random string ONLY YOU know
+    EXPECTED = 'hick-cleanup-2026-secret-xyz'
 
+    if secret != EXPECTED:
+        return 'Not found', 404
+
+    # Delete all cards first (foreign key constraint)
+    card_count = Card.query.delete()
+    user_count = User.query.delete()
+    db.session.commit()
+
+    return jsonify({
+        'status': 'ok',
+        'deleted_users': user_count,
+        'deleted_cards': card_count,
+    })
 
 # ============================================================
 # ENTRY POINT
