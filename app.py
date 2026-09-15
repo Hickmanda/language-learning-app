@@ -358,11 +358,17 @@ def dictionary():
     else:
         c = find_course(selected)
         courses_to_show = [c] if c else COURSES
-        if c and c.get('target_lang'):
+
+        # Auto-switch only if the user just picked a DIFFERENT course
+        previously_viewing = session.get('current_dict_course')
+        if c and c.get('target_lang') and previously_viewing != selected:
             session['learn_lang'] = c['target_lang']
             session['base_lang'] = session.get('ui_lang', 'en')
+            session['current_dict_course'] = selected
             learn = session['learn_lang']
             base = session['base_lang']
+        elif selected == 'all':
+            session.pop('current_dict_course', None)
 
     results = None
     if query:
@@ -447,9 +453,16 @@ def course_detail(course_id):
     if not course:
         return redirect(url_for('courses'))
 
-    if course.get('target_lang'):
-        session['learn_lang'] = course['target_lang']
-    session['base_lang'] = session.get('ui_lang', 'en')
+    # Auto-switch language ONLY when the user opens a DIFFERENT course.
+    # If they just refresh the same page or manually change language,
+    # their choice stays intact.
+    previously_viewing = session.get('current_course_id')
+
+    if previously_viewing != course_id:
+        if course.get('target_lang'):
+            session['learn_lang'] = course['target_lang']
+        session['base_lang'] = session.get('ui_lang', 'en')
+        session['current_course_id'] = course_id
 
     return render_template('course_detail.html',
                            course=course,
@@ -493,9 +506,14 @@ def lesson_detail(lesson_id):
 
     topic = course['topics'][lesson['topic_index']]
 
-    if course.get('target_lang'):
-        session['learn_lang'] = course['target_lang']
-    session['base_lang'] = session.get('ui_lang', 'en')
+    # Auto-switch only when opening a different lesson
+    previously_viewing = session.get('current_lesson_id')
+
+    if previously_viewing != lesson_id:
+        if course.get('target_lang'):
+            session['learn_lang'] = course['target_lang']
+        session['base_lang'] = session.get('ui_lang', 'en')
+        session['current_lesson_id'] = lesson_id
 
     return render_template('lesson_detail.html',
                            lesson=lesson, topic=topic,
