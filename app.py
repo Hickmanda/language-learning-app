@@ -24,16 +24,39 @@ from data.lessons import LESSON_CATEGORIES
 # ============================================================
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cards.db'
+
+# ============================================================
+# DATABASE CONFIGURATION
+# In production (Render), we use PostgreSQL via DATABASE_URL.
+# Locally, we fall back to SQLite so nothing breaks on your PC.
+# ============================================================
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///cards.db')
+
+# Render uses 'postgres://', but SQLAlchemy 2.x requires 'postgresql://'
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+# ============================================================
+# SPEECH LANGUAGES — map our 2-letter codes to BCP-47 tags
+# used by the browser's speechSynthesis API.
+# ============================================================
 SPEECH_LANGS = {
-    "en": "en-US", "ru": "ru-RU", "ro": "ro-RO", "uk": "uk-UA",
-    "zh": "zh-CN", "es": "es-ES", "fr": "fr-FR", "de": "de-DE",
-    "it": "it-IT", "ja": "ja-JP",
+    "en": "en-US",
+    "ru": "ru-RU",
+    "ro": "ro-RO",
+    "uk": "uk-UA",
+    "zh": "zh-CN",
+    "es": "es-ES",
+    "fr": "fr-FR",
+    "de": "de-DE",
+    "it": "it-IT",
+    "ja": "ja-JP",
 }
 
 # ============================================================
@@ -68,55 +91,44 @@ class Card(db.Model):
     base_language = db.Column(db.String(5), nullable=False)
     known = db.Column(db.Boolean, default=False)
 
+
 # ============================================================
 # AUTH HELPERS
 # ============================================================
+def current_user():
+    """Return the currently logged-in user object, or None."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return None
+    return db.session.get(User, user_id)
+
+
 def login_required(f):
-    """Decorator: redirect to login page if user isn't authenticated."""
+    """
+    Decorator: redirect to login page if the user isn't authenticated.
+    Also handles the case where the session cookie references a user
+    that no longer exists (e.g. after a database reset).
+    """
     @wraps(f)
     def decorated(*args, **kwargs):
+        # 1. No session at all — user never logged in
         if 'user_id' not in session:
             flash('Please sign in first.', 'error')
             return redirect(url_for('login', next=request.path))
+
+        # 2. Session exists, but the user might have been deleted
+        #    (e.g. after a database reset on a free host)
+        if current_user() is None:
+            session.clear()
+            flash('Your session has expired. Please sign in again.', 'error')
+            return redirect(url_for('login', next=request.path))
+
         return f(*args, **kwargs)
     return decorated
 
 
-def current_user():
-    """Return the current User object, or None."""
-    uid = session.get('user_id')
-    return db.session.get(User, uid) if uid else None
-
 # ============================================================
-# PROGRESS HELPER
-# ============================================================
-def course_progress(user, course):
-    """
-    Return (learned, total) for a user and a course.
-    A word counts as 'learned' if the user has a Card with
-    that word (in the course's target language) marked as known.
-    """
-    total = count_words(course)
-    if not user:
-        return (0, total)
-
-    target = course.get('target_lang', 'en')
-    course_words = set()
-    for topic in course['topics']:
-        for w in topic['words']:
-            val = w.get(target)
-            if val:
-                course_words.add(val)
-
-    learned_words = set()
-    for card in user.cards:
-        if card.language == target and card.known and card.word in course_words:
-            learned_words.add(card.word)
-
-    return (len(learned_words), total)
-
-# ============================================================
-# CONTEXT PROCESSOR
+# CONTEXT PROCESSOR — inject globals into every template
 # ============================================================
 @app.context_processor
 def inject_globals():
@@ -139,37 +151,28 @@ def inject_globals():
         'user': current_user(),
     }
 
+
 # ============================================================
 # AUTH ROUTES
 # ============================================================
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if session.get('user_id'):
-        return redirect(url_for('index'))
-
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
-        email    = request.form.get('email', '').strip().lower()
+        email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
-        confirm  = request.form.get('confirm', '')
 
-        errors = []
-        if len(username) < 3:
-            errors.append('Username must be at least 3 characters.')
-        if '@' not in email:
-            errors.append('Please enter a valid email.')
-        if len(password) < 6:
-            errors.append('Password must be at least 6 characters.')
-        if password != confirm:
-            errors.append('Passwords do not match.')
+        # Validation
+        if not username or not email or not password:
+            flash('All fields are required.', 'error')
+            return render_template('register.html')
+
         if User.query.filter_by(username=username).first():
-            errors.append('Username is already taken.')
-        if User.query.filter_by(email=email).first():
-            errors.append('Email is already registered.')
+            flash('Username already taken.', 'error')
+            return render_template('register.html')
 
-        if errors:
-            for e in errors:
-                flash(e, 'error')
+        if User.query.filter_by(email=email).first():
+            flash('Email already registered.', 'error')
             return render_template('register.html')
 
         user = User(username=username, email=email)
@@ -178,7 +181,7 @@ def register():
         db.session.commit()
 
         session['user_id'] = user.id
-        flash(f'Welcome, {user.username}!', 'success')
+        flash(f'Welcome, {username}!', 'success')
         return redirect(url_for('index'))
 
     return render_template('register.html')
@@ -186,24 +189,19 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if session.get('user_id'):
-        return redirect(url_for('index'))
-
     if request.method == 'POST':
-        login_value = request.form.get('login', '').strip()
-        password    = request.form.get('password', '')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
 
-        user = User.query.filter(
-            (User.username == login_value) | (User.email == login_value.lower())
-        ).first()
-
+        user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
             session['user_id'] = user.id
-            flash(f'Welcome back, {user.username}!', 'success')
-            next_url = request.args.get('next') or url_for('index')
-            return redirect(next_url)
+            flash(f'Welcome back, {username}!', 'success')
+            next_page = request.args.get('next') or url_for('index')
+            return redirect(next_page)
 
         flash('Invalid username or password.', 'error')
+        return render_template('login.html')
 
     return render_template('login.html')
 
@@ -214,6 +212,7 @@ def logout():
     flash('You have been signed out.', 'success')
     return redirect(url_for('index'))
 
+
 # ============================================================
 # SETTINGS ROUTES
 # ============================================================
@@ -221,8 +220,10 @@ def logout():
 def set_ui_lang(code):
     if code in LANGUAGES:
         session['ui_lang'] = code
+        # Keep base language in sync with the UI language
         session['base_lang'] = code
     return redirect(request.referrer or url_for('index'))
+
 
 @app.route('/set_learn_lang/<code>')
 def set_learn_lang(code):
@@ -230,22 +231,26 @@ def set_learn_lang(code):
         session['learn_lang'] = code
     return redirect(request.referrer or url_for('index'))
 
+
 @app.route('/set_base_lang/<code>')
 def set_base_lang(code):
     if code in LANGUAGES:
         session['base_lang'] = code
     return redirect(request.referrer or url_for('index'))
 
+
 @app.route('/set_course/<course_id>')
 def set_course(course_id):
     session['course_id'] = course_id
     return redirect(request.referrer or url_for('dictionary'))
+
 
 @app.route('/toggle_theme')
 def toggle_theme():
     current = session.get('theme', 'light')
     session['theme'] = 'dark' if current == 'light' else 'light'
     return redirect(request.referrer or url_for('index'))
+
 
 # ============================================================
 # MAIN ROUTES
@@ -255,11 +260,14 @@ def index():
     user = current_user()
     cards = []
     if user:
-        cards = (Card.query
-                 .filter_by(user_id=user.id)
-                 .order_by(Card.id.desc())
-                 .all())
+        cards = (
+            Card.query
+            .filter_by(user_id=user.id)
+            .order_by(Card.id.desc())
+            .all()
+        )
     return render_template('index.html', cards=cards)
+
 
 @app.route('/add', methods=['GET', 'POST'])
 @login_required
@@ -276,6 +284,7 @@ def add():
         return redirect(url_for('index'))
     return render_template('add.html')
 
+
 @app.route('/delete/<int:card_id>', methods=['POST'])
 @login_required
 def delete_card(card_id):
@@ -285,18 +294,26 @@ def delete_card(card_id):
         db.session.commit()
     return redirect(url_for('index'))
 
+
 @app.route('/quiz', methods=['GET', 'POST'])
 @login_required
 def quiz():
     user = current_user()
+    if user is None:
+        # Safety net — should never happen because of login_required
+        session.clear()
+        return redirect(url_for('login'))
+
     if request.method == 'POST':
         card_id = request.form.get('card_id')
         answer = request.form.get('answer', '').strip().lower()
         card = db.session.get(Card, int(card_id)) if card_id else None
+
         if card and card.user_id == user.id and card.translation.lower() == answer:
             card.known = True
             db.session.commit()
             return redirect(url_for('quiz'))
+
         error = UI_TRANSLATIONS[session.get('ui_lang', 'en')]['wrong']
         return render_template('quiz.html', card=card, error=error)
 
@@ -305,14 +322,15 @@ def quiz():
         return render_template('quiz.html', card=None)
     return render_template('quiz.html', card=random.choice(unknown))
 
+
 @app.route('/stats')
 @login_required
 def stats():
-    user = current_user()
-    total = Card.query.filter_by(user_id=user.id).count()
-    known = Card.query.filter_by(user_id=user.id, known=True).count()
-    return render_template('stats.html',
-                           total=total, known=known, unknown=total - known)
+    user_id = session['user_id']
+    total = Card.query.filter_by(user_id=user_id).count()
+    known = Card.query.filter_by(user_id=user_id, known=True).count()
+    return render_template('stats.html', total=total, known=known, unknown=total - known)
+
 
 # ============================================================
 # DICTIONARY
@@ -346,39 +364,39 @@ def dictionary():
                            learn=learn,
                            base=base)
 
+
 @app.route('/add_from_bank', methods=['POST'])
 @login_required
 def add_from_bank():
-    user = current_user()
     word = request.form['word']
     translation = request.form['translation']
     language = request.form['language']
     base_language = request.form['base_language']
+    user_id = session['user_id']
 
     existing = Card.query.filter_by(
-        user_id=user.id, word=word,
-        language=language, base_language=base_language
+        user_id=user_id,
+        word=word, language=language, base_language=base_language
     ).first()
 
     if not existing:
         db.session.add(Card(
-            user_id=user.id, word=word, translation=translation,
-            language=language, base_language=base_language,
+            user_id=user_id,
+            word=word, translation=translation,
+            language=language, base_language=base_language
         ))
         db.session.commit()
 
     return redirect(request.referrer or url_for('dictionary'))
+
 
 # ============================================================
 # COURSES
 # ============================================================
 @app.route('/courses')
 def courses():
-    user = current_user()
-    progress = {}
-    for c in COURSES:
-        progress[c['id']] = course_progress(user, c)
-    return render_template('courses.html', courses=COURSES, progress=progress)
+    return render_template('courses.html', courses=COURSES)
+
 
 @app.route('/course/<course_id>')
 def course_detail(course_id):
@@ -390,21 +408,19 @@ def course_detail(course_id):
         session['learn_lang'] = course['target_lang']
     session['base_lang'] = session.get('ui_lang', 'en')
 
-    user = current_user()
-    learned, total = course_progress(user, course)
-
     return render_template('course_detail.html',
                            course=course,
                            learn=session.get('learn_lang', 'en'),
-                           base=session.get('base_lang', 'ru'),
-                           learned=learned, total=total)
+                           base=session.get('base_lang', 'ru'))
+
 
 @app.route('/course/<course_id>/videos')
 def course_videos(course_id):
     course = find_course(course_id)
-    if not course or not course.get('video_url'):
-        return redirect(url_for('course_detail', course_id=course_id))
+    if not course:
+        return redirect(url_for('courses'))
     return render_template('course_videos.html', course=course)
+
 
 # ============================================================
 # LESSONS
@@ -412,6 +428,7 @@ def course_videos(course_id):
 @app.route('/lessons')
 def lessons():
     return render_template('lessons.html', categories=LESSON_CATEGORIES)
+
 
 @app.route('/lesson/<lesson_id>')
 def lesson_detail(lesson_id):
@@ -442,57 +459,58 @@ def lesson_detail(lesson_id):
                            learn=session.get('learn_lang', 'en'),
                            base=session.get('base_lang', 'ru'))
 
+
 # ============================================================
 # CSV EXPORT / IMPORT
 # ============================================================
 @app.route('/export/csv')
 @login_required
 def export_csv():
-    user = current_user()
+    user_id = session['user_id']
+    cards = Card.query.filter_by(user_id=user_id).all()
+
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['word', 'translation', 'language', 'base_language', 'known'])
-    for c in user.cards:
+    for c in cards:
         writer.writerow([c.word, c.translation, c.language, c.base_language, c.known])
 
     return Response(
         output.getvalue(),
         mimetype='text/csv',
-        headers={'Content-Disposition': 'attachment; filename=cards.csv'}
+        headers={'Content-Disposition': 'attachment; filename=my_cards.csv'}
     )
+
 
 @app.route('/import/csv', methods=['POST'])
 @login_required
 def import_csv():
-    user = current_user()
     file = request.files.get('file')
-    if not file or not file.filename:
-        flash('Please choose a CSV file.', 'error')
+    if not file:
+        flash('No file uploaded.', 'error')
         return redirect(url_for('index'))
 
     try:
-        content = file.stream.read().decode('utf-8')
-        reader = csv.DictReader(io.StringIO(content))
+        stream = io.StringIO(file.stream.read().decode('UTF-8'))
+        reader = csv.DictReader(stream)
+        user_id = session['user_id']
         count = 0
+
         for row in reader:
-            if not row.get('word') or not row.get('translation'):
-                continue
-            lang = row.get('language', 'en').strip() or 'en'
-            base = row.get('base_language', 'ru').strip() or 'ru'
-            exists = Card.query.filter_by(
-                user_id=user.id, word=row['word'],
-                language=lang, base_language=base
-            ).first()
-            if exists:
+            word = row.get('word', '').strip()
+            translation = row.get('translation', '').strip()
+            if not word or not translation:
                 continue
             db.session.add(Card(
-                user_id=user.id,
-                word=row['word'].strip(),
-                translation=row['translation'].strip(),
-                language=lang, base_language=base,
-                known=row.get('known', '').lower() in ('1', 'true', 'yes'),
+                user_id=user_id,
+                word=word,
+                translation=translation,
+                language=row.get('language', 'en'),
+                base_language=row.get('base_language', 'ru'),
+                known=row.get('known', 'False').lower() == 'true',
             ))
             count += 1
+
         db.session.commit()
         flash(f'Imported {count} cards.', 'success')
     except Exception as e:
@@ -500,20 +518,22 @@ def import_csv():
 
     return redirect(url_for('index'))
 
+
 # ============================================================
-# JSON API
+# API
 # ============================================================
 @app.route('/api/words')
 def api_words():
     """
-    Public JSON API.
-    GET /api/words                       -> all courses' words
-    GET /api/words?course=hsk1           -> words of one course
-    GET /api/words?learn=fr&base=en      -> custom language pair
+    Public JSON endpoint that returns words from the word bank.
+    Optional query params:
+        course=<course_id>  — filter by course
+        learn=<lang_code>   — which language to return (default: en)
+        base=<lang_code>    — translation language (default: ru)
     """
     course_id = request.args.get('course')
     learn = request.args.get('learn', 'en')
-    base  = request.args.get('base', 'ru')
+    base = request.args.get('base', 'ru')
 
     if course_id:
         c = find_course(course_id)
@@ -542,6 +562,7 @@ def api_words():
         'base': base,
         'words': words,
     })
+
 
 # ============================================================
 # ENTRY POINT
