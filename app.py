@@ -600,51 +600,6 @@ def api_words():
     })
 
 
-# ============================================================
-# TEMPORARY DEBUG ROUTES — REMOVE AFTER DEBUGGING
-# ============================================================
-@app.route('/debug/users')
-def debug_users():
-    """Show all users in the database with their stored fields."""
-    users = User.query.all()
-    result = []
-    for u in users:
-        result.append({
-            'id': u.id,
-            'username': repr(u.username),
-            'email': repr(u.email),
-            'hash_prefix': u.password_hash[:30] + '...' if u.password_hash else None,
-            'cards_count': len(u.cards) if u.cards else 0,
-        })
-    return jsonify({
-        'database_url_scheme': database_url.split('://')[0],
-        'count': len(users),
-        'users': result,
-    })
-
-
-@app.route('/debug/test-login/<username>/<password>')
-def debug_test_login(username, password):
-    """Test if a username + password combination works."""
-    user = User.query.filter(
-        (User.username == username) |
-        (User.email == username.lower())
-    ).first()
-
-    if not user:
-        return jsonify({
-            'found': False,
-            'message': f'No user with username or email "{username}"',
-        })
-
-    return jsonify({
-        'found': True,
-        'user_id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'hash_prefix': user.password_hash[:30] + '...',
-        'check_password_result': user.check_password(password),
-    })
 
 
 # ============================================================
