@@ -43,8 +43,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 # ============================================================
-# SPEECH LANGUAGES — map our 2-letter codes to BCP-47 tags
-# used by the browser's speechSynthesis API.
+# SPEECH LANGUAGES
 # ============================================================
 SPEECH_LANGS = {
     "en": "en-US",
@@ -117,7 +116,6 @@ def login_required(f):
             return redirect(url_for('login', next=request.path))
 
         # 2. Session exists, but the user might have been deleted
-        #    (e.g. after a database reset on a free host)
         if current_user() is None:
             session.clear()
             flash('Your session has expired. Please sign in again.', 'error')
@@ -128,7 +126,7 @@ def login_required(f):
 
 
 # ============================================================
-# CONTEXT PROCESSOR — inject globals into every template
+# CONTEXT PROCESSOR
 # ============================================================
 @app.context_processor
 def inject_globals():
@@ -162,9 +160,12 @@ def register():
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
 
-        # Validation
         if not username or not email or not password:
             flash('All fields are required.', 'error')
+            return render_template('register.html')
+
+        if len(password) < 6:
+            flash('Password must be at least 6 characters.', 'error')
             return render_template('register.html')
 
         if User.query.filter_by(username=username).first():
@@ -190,13 +191,18 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('username', '').strip()
+        identifier = request.form.get('username', '').strip()
         password = request.form.get('password', '')
 
-        user = User.query.filter_by(username=username).first()
+        # Allow login with username OR email
+        user = User.query.filter(
+            (User.username == identifier) |
+            (User.email == identifier.lower())
+        ).first()
+
         if user and user.check_password(password):
             session['user_id'] = user.id
-            flash(f'Welcome back, {username}!', 'success')
+            flash(f'Welcome back, {user.username}!', 'success')
             next_page = request.args.get('next') or url_for('index')
             return redirect(next_page)
 
@@ -220,7 +226,6 @@ def logout():
 def set_ui_lang(code):
     if code in LANGUAGES:
         session['ui_lang'] = code
-        # Keep base language in sync with the UI language
         session['base_lang'] = code
     return redirect(request.referrer or url_for('index'))
 
@@ -273,14 +278,16 @@ def index():
 @login_required
 def add():
     if request.method == 'POST':
+        word = request.form['word'].strip()
         db.session.add(Card(
             user_id=session['user_id'],
-            word=request.form['word'].strip(),
+            word=word,
             translation=request.form['translation'].strip(),
             language=request.form['language'],
             base_language=request.form['base_language'],
         ))
         db.session.commit()
+        flash(f'"{word}" added to your cards! ✨', 'success')
         return redirect(url_for('index'))
     return render_template('add.html')
 
@@ -292,6 +299,7 @@ def delete_card(card_id):
     if card and card.user_id == session['user_id']:
         db.session.delete(card)
         db.session.commit()
+        flash('Card deleted.', 'success')
     return redirect(url_for('index'))
 
 
@@ -300,7 +308,6 @@ def delete_card(card_id):
 def quiz():
     user = current_user()
     if user is None:
-        # Safety net — should never happen because of login_required
         session.clear()
         return redirect(url_for('login'))
 
@@ -312,6 +319,7 @@ def quiz():
         if card and card.user_id == user.id and card.translation.lower() == answer:
             card.known = True
             db.session.commit()
+            flash('Correct! 🎉', 'success')
             return redirect(url_for('quiz'))
 
         error = UI_TRANSLATIONS[session.get('ui_lang', 'en')]['wrong']
@@ -379,13 +387,16 @@ def add_from_bank():
         word=word, language=language, base_language=base_language
     ).first()
 
-    if not existing:
+    if existing:
+        flash(f'"{word}" is already in your collection.', 'info')
+    else:
         db.session.add(Card(
             user_id=user_id,
             word=word, translation=translation,
             language=language, base_language=base_language
         ))
         db.session.commit()
+        flash(f'"{word}" added to your cards! ✨', 'success')
 
     return redirect(request.referrer or url_for('dictionary'))
 
@@ -524,13 +535,6 @@ def import_csv():
 # ============================================================
 @app.route('/api/words')
 def api_words():
-    """
-    Public JSON endpoint that returns words from the word bank.
-    Optional query params:
-        course=<course_id>  — filter by course
-        learn=<lang_code>   — which language to return (default: en)
-        base=<lang_code>    — translation language (default: ru)
-    """
     course_id = request.args.get('course')
     learn = request.args.get('learn', 'en')
     base = request.args.get('base', 'ru')
@@ -561,6 +565,54 @@ def api_words():
         'learn': learn,
         'base': base,
         'words': words,
+    })
+
+
+# ============================================================
+# ⚠️ TEMPORARY DEBUG ROUTES — REMOVE AFTER DEBUGGING ⚠️
+# ============================================================
+
+@app.route('/debug/users')
+def debug_users():
+    """Show all users in the database with their stored fields."""
+    users = User.query.all()
+    result = []
+    for u in users:
+        result.append({
+            'id': u.id,
+            'username': repr(u.username),
+            'email': repr(u.email),
+            'hash_prefix': u.password_hash[:30] + '...' if u.password_hash else None,
+            'cards_count': len(u.cards) if u.cards else 0,
+        })
+    return jsonify({
+        'database_url_scheme': database_url.split('://')[0],
+        'count': len(users),
+        'users': result,
+    })
+
+
+@app.route('/debug/test-login/<username>/<password>')
+def debug_test_login(username, password):
+    """Test if a username + password combination works."""
+    user = User.query.filter(
+        (User.username == username) |
+        (User.email == username.lower())
+    ).first()
+
+    if not user:
+        return jsonify({
+            'found': False,
+            'message': f'No user with username or email "{username}"',
+        })
+
+    return jsonify({
+        'found': True,
+        'user_id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'hash_prefix': user.password_hash[:30] + '...',
+        'check_password_result': user.check_password(password),
     })
 
 
