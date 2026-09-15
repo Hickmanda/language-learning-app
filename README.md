@@ -34,6 +34,13 @@ A full-stack web application for learning **10 languages** with structured cours
 </table>
 ---
 
+## 🎥 Video Demo
+
+[![Watch the demo](https://img.youtube.com/vi/I-ySSn4vb3A/maxresdefault.jpg)](https://youtu.be/I-ySSn4vb3A)
+
+*2-minute walkthrough — register, browse courses, add flashcards, take a quiz, switch languages.*
+
+
 ## ✨ Features
 
 ### 🎓 Learning content
