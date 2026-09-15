@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<a href="{{ url_for('courses') }}" class="back-link">← {{ t.back }}</a>
+<h1>{{ course.name[ui_lang] }}</h1>
+<p class="subtitle">
+    {% if course.exam %}{{ course.exam }} · {% endif %}
+    {{ learned }} / {{ total }} words learned
+</p>
+
+{% set pct = (learned / total * 100) if total else 0 %}
+<div class="progress-bar progress-bar-lg">
+    <div class="progress-fill" data-width="{{ pct }}"></div>
+</div>
+
+{% if course.video_url %}
+    <a href="{{ url_for('course_videos', course_id=course.id) }}"
+       class="btn-primary btn-inline">
+        🎥 {{ t.videos }}
+    </a>
+{% endif %}
+
+{% for topic in course.topics %}
+    <h2 class="course-header">{{ topic.topic[ui_lang] }}</h2>
+    <div class="dict-grid">
+        {% for w in topic.words %}
+            <div class="dict-card">
+                <div class="dict-word">{{ w[learn] }}</div>
+                {% set rom = w.get(learn ~ '_rom') %}
+                {% if rom %}<div class="romaji">{{ rom }}</div>{% endif %}
+                <div class="dict-translation">{{ w[base] }}</div>
+                <div class="word-actions">
+                    <button class="btn-speak"
+                            data-text="{{ w[learn] }}"
+                            data-lang="{{ SPEECH_LANGS[learn] }}"
+                            onclick="speakFromButton(this)"
+                            title="Pronounce">🔊</button>
+                    <form method="POST" action="{{ url_for('add_from_bank') }}" class="form-grow">
+                        <input type="hidden" name="word" value="{{ w[learn] }}">
+                        <input type="hidden" name="translation" value="{{ w[base] }}">
+                        <input type="hidden" name="language" value="{{ learn }}">
+                        <input type="hidden" name="base_language" value="{{ base }}">
+                        <button class="btn-small" type="submit">➕ {{ t.add }}</button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endfor %}
+
+{% endblock %}

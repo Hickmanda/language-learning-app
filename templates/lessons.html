@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h1>{{ t.lessons }}</h1>
+<p class="subtitle">{{ t.study_topics }}</p>
+
+{% for category in categories %}
+    <h2 class="course-header">{{ category.name[ui_lang] }}</h2>
+    <div class="lesson-grid">
+        {% for lesson in category.lessons %}
+            <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" class="lesson-card">
+                <div class="lesson-level">{{ lesson.level }}</div>
+                <div class="lesson-title">{{ lesson.title[ui_lang] }}</div>
+            </a>
+        {% endfor %}
+    </div>
+{% endfor %}
+
+{% endblock %}

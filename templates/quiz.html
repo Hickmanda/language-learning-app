@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h1>{{ t.quiz }}</h1>
+
+{% if card %}
+    <div class="quiz-box">
+        <p class="quiz-instruction">{{ t.translate_word }}:</p>
+        <div class="quiz-word">
+            {{ card.word }}
+            <button class="btn-speak btn-speak-lg"
+                    data-text="{{ card.word }}"
+                    data-lang="{{ SPEECH_LANGS[card.language] }}"
+                    onclick="speakFromButton(this)"
+                    title="Pronounce">🔊</button>
+        </div>
+        <div class="quiz-lang">
+            {{ LANGUAGES[card.language].code }} → {{ LANGUAGES[card.base_language].code }}
+        </div>
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+        <form method="POST">
+            <input type="hidden" name="card_id" value="{{ card.id }}">
+            <input type="text" name="answer" required autofocus placeholder="...">
+            <button type="submit" class="btn-primary">{{ t.check }}</button>
+        </form>
+    </div>
+{% else %}
+    <p class="empty">{{ t.all_learned }}</p>
+{% endif %}
+
+{% endblock %}

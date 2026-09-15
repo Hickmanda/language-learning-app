@@ -1,0 +1,599 @@
+/* ============================================================
+   THEMES
+   ============================================================ */
+:root {
+    --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+    --bg-card: #ffffff;
+    --bg-elevated: #fafafa;
+    --bg-input: #f5f5f5;
+    --text-primary: #222;
+    --text-secondary: #666;
+    --text-muted: #888;
+    --border: #e0e0e0;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-md: 0 6px 16px rgba(0,0,0,0.10);
+    --nav-bg: #2b2b2b;
+    --nav-text: #fff;
+    --accent: #007bff;
+    --accent-hover: #0056b3;
+    --accent-soft: #e3f2fd;
+    --danger: #d9534f;
+    --danger-soft: #fdecec;
+}
+
+[data-theme="dark"] {
+    --bg-gradient: linear-gradient(135deg, #1a1d23 0%, #0f1115 100%);
+    --bg-card: #23262d;
+    --bg-elevated: #1c1f25;
+    --bg-input: #2a2e36;
+    --text-primary: #e8eaed;
+    --text-secondary: #b0b4bb;
+    --text-muted: #7a7f87;
+    --border: #333740;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+    --shadow-md: 0 6px 16px rgba(0,0,0,0.4);
+    --nav-bg: #16181d;
+    --nav-text: #e8eaed;
+    --accent: #4dabff;
+    --accent-hover: #6ebdff;
+    --accent-soft: #1e3a5f;
+    --danger: #ff6b66;
+    --danger-soft: #3a1f1e;
+}
+
+/* ============================================================
+   GLOBAL
+   ============================================================ */
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+    background: var(--bg-gradient);
+    min-height: 100vh;
+    color: var(--text-primary);
+    transition: background 0.3s, color 0.3s;
+}
+
+h1 { font-size: 28px; margin: 10px 0 20px; }
+h2 { font-size: 20px; margin: 30px 0 12px; color: var(--text-primary); }
+h3 { font-size: 17px; margin: 20px 0 10px; color: var(--text-secondary); }
+.subtitle { color: var(--text-secondary); margin-bottom: 20px; }
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: var(--bg-card);
+    padding: 14px 20px;
+    border-radius: 14px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow-sm);
+}
+.logo { font-size: 18px; font-weight: 700; color: var(--accent); }
+.header-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.control { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
+.control select {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.theme-toggle {
+    font-size: 20px;
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: var(--bg-input);
+    transition: background 0.15s;
+    line-height: 1;
+}
+.theme-toggle:hover { background: var(--accent-soft); }
+
+/* User badge */
+.user-badge {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+    padding: 6px 10px;
+    background: var(--accent-soft);
+    border-radius: 8px;
+}
+
+/* ============================================================
+   NAV
+   ============================================================ */
+nav {
+    background: var(--nav-bg);
+    padding: 12px 16px;
+    border-radius: 14px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+nav a {
+    color: var(--nav-text);
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: background 0.15s;
+}
+nav a:hover { background: rgba(255,255,255,0.12); }
+
+/* ============================================================
+   LEARNING BAR
+   ============================================================ */
+.learning-bar {
+    background: var(--bg-card);
+    padding: 12px 20px;
+    border-radius: 14px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    font-size: 13px;
+}
+
+/* ============================================================
+   FLASH MESSAGES
+   ============================================================ */
+.flash-area { margin-bottom: 16px; }
+.flash {
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+.flash-success { background: #d4edda; color: #155724; }
+.flash-error   { background: #f8d7da; color: #721c24; }
+[data-theme="dark"] .flash-success { background: #1e3a24; color: #b6e5c1; }
+[data-theme="dark"] .flash-error   { background: #3a1f1e; color: #ffb8b4; }
+
+/* ============================================================
+   CARD GRIDS
+   ============================================================ */
+.card-grid, .dict-grid, .lesson-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.card, .dict-card, .lesson-card {
+    background: var(--bg-card);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.18s, box-shadow 0.18s;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid transparent;
+}
+.card:hover, .dict-card:hover, .lesson-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--accent-soft);
+}
+
+.card-lang { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 1px; }
+.card-word { font-size: 22px; font-weight: 700; color: var(--accent); }
+.card-translation { font-size: 15px; color: var(--text-secondary); margin-top: 4px; }
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+.status { font-size: 18px; }
+
+/* ============================================================
+   PAGE HEADER (title + actions on one line)
+   ============================================================ */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+/* ============================================================
+   DICTIONARY
+   ============================================================ */
+.topic-block { margin-bottom: 30px; }
+.dict-word { font-size: 19px; font-weight: 700; color: var(--accent); }
+.dict-translation { font-size: 15px; color: var(--text-secondary); margin: 4px 0 10px; }
+.dict-course {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ============================================================
+   LESSONS / COURSES
+   ============================================================ */
+.lesson-level {
+    display: inline-block;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+.lesson-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+.lesson-count { font-size: 12px; color: var(--text-muted); }
+
+.back-link {
+    display: inline-block;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.course-header {
+    font-size: 20px;
+    color: var(--accent);
+    margin: 30px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent-soft);
+}
+
+.lesson-card.active {
+    border: 2px solid var(--accent);
+    box-shadow: var(--shadow-md);
+}
+
+/* ============================================================
+   FORMS
+   ============================================================ */
+.form-card {
+    background: var(--bg-card);
+    padding: 24px;
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    max-width: 500px;
+}
+.form-card label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+input[type="text"], input[type="email"], input[type="password"], select {
+    width: 100%;
+    padding: 11px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    transition: border 0.15s, background 0.15s;
+}
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--bg-card);
+}
+
+/* Search form */
+.search-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    background: var(--bg-card);
+    padding: 12px;
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    align-items: center;
+}
+.search-form input[type="text"] {
+    flex: 1;
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: 10px;
+}
+.btn-search {
+    background: var(--accent);
+    color: white;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+.btn-search:hover { background: var(--accent-hover); }
+.btn-clear {
+    text-decoration: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--bg-input);
+}
+.btn-clear:hover { color: var(--danger); background: var(--danger-soft); }
+
+/* CSV import form */
+.import-form {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.import-form input[type="file"] {
+    font-size: 12px;
+    padding: 6px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+}
+
+/* Generic helper: make a form grow inside a flex row */
+.form-grow { flex: 1; }
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    transition: background 0.15s, transform 0.1s;
+}
+.btn-primary {
+    background: var(--accent);
+    color: white;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    width: 100%;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    border-radius: 10px;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+
+/* Inline variants */
+.btn-inline {
+    display: inline-block;
+    width: auto;
+    padding: 8px 14px;
+    text-decoration: none;
+}
+.btn-inline-sm {
+    display: inline-block;
+    width: auto;
+    padding: 6px 12px;
+    text-decoration: none;
+}
+.btn-accent {
+    background: var(--accent);
+    color: #fff;
+}
+.btn-accent:hover { background: var(--accent-hover); }
+
+.btn-small {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    width: 100%;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    border-radius: 10px;
+}
+.btn-small:hover { background: var(--accent); color: white; }
+
+.btn-delete {
+    background: transparent;
+    color: var(--danger);
+    font-size: 13px;
+    padding: 4px 8px;
+}
+.btn-delete:hover { background: var(--danger-soft); }
+
+/* ============================================================
+   QUIZ
+   ============================================================ */
+.quiz-box {
+    background: var(--bg-card);
+    padding: 40px;
+    border-radius: 18px;
+    box-shadow: var(--shadow-md);
+    text-align: center;
+    max-width: 520px;
+    margin: 0 auto;
+}
+.quiz-instruction { color: var(--text-secondary); margin-bottom: 10px; }
+.quiz-word { font-size: 44px; font-weight: 700; color: var(--accent); margin: 15px 0; }
+.quiz-lang {
+    font-size: 16px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+}
+.quiz-box input[type="text"] { text-align: center; font-size: 18px; }
+.error {
+    color: var(--danger);
+    background: var(--danger-soft);
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+/* ============================================================
+   STATS
+   ============================================================ */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-top: 20px;
+}
+.stat-box {
+    background: var(--bg-card);
+    padding: 24px;
+    border-radius: 14px;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    border-top: 4px solid var(--accent);
+}
+.stat-box.green { border-color: #28a745; }
+.stat-box.orange { border-color: #fd7e14; }
+.stat-num { font-size: 36px; font-weight: 700; color: var(--text-primary); }
+.stat-label { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+.empty {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 40px;
+    background: var(--bg-card);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+}
+.empty a { color: var(--accent); font-weight: 600; }
+
+/* ============================================================
+   COURSE FILTER (dictionary page)
+   ============================================================ */
+.course-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 24px;
+}
+.course-filter .pill {
+    padding: 6px 14px;
+    font-size: 13px;
+    text-decoration: none;
+    border-radius: 20px;
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    transition: all 0.15s;
+}
+.course-filter .pill:hover { background: var(--accent-soft); color: var(--accent); }
+.course-filter .pill.active { background: var(--accent); color: white; }
+
+/* ============================================================
+   VIDEO
+   ============================================================ */
+.video-container {
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+    margin: 20px auto;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    background: #000;
+}
+.video-container iframe {
+    display: block;
+    width: 100%;
+    height: 500px;
+    border: none;
+}
+.video-tip { margin-top: 24px; font-size: 12px; }
+
+/* ============================================================
+   PROGRESS BAR
+   ============================================================ */
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--bg-input);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+.progress-fill {
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, var(--accent), #4dabff);
+    border-radius: 8px;
+    transition: width 0.4s ease;
+}
+.progress-bar-lg {
+    height: 10px;
+    margin-bottom: 20px;
+}
+
+/* ============================================================
+   PRONUNCIATION BUTTON
+   ============================================================ */
+.word-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 8px;
+}
+.word-actions-flat { margin-top: 0; }
+
+.btn-speak {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 16px;
+    cursor: pointer;
+    line-height: 1;
+    transition: all 0.15s;
+}
+.btn-speak:hover {
+    background: var(--accent);
+    color: white;
+    transform: scale(1.05);
+}
+.btn-speak-lg {
+    font-size: 22px;
+    padding: 8px 14px;
+    vertical-align: middle;
+    margin-left: 10px;
+}
+.btn-speak:active { transform: scale(0.95); }
+
+/* ============================================================
+   ROMANIZATION (pinyin / romaji)
+   ============================================================ */
+.romaji {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-style: italic;
+    margin: 2px 0 4px;
+    letter-spacing: 0.3px;
+}

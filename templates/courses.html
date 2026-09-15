@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h1>{{ t.choose_course }}</h1>
+<p class="subtitle">{{ t.choose_course_desc }}</p>
+
+<div class="lesson-grid">
+    {% for c in courses %}
+        {% set prog = progress[c.id] %}
+        {% set pct = (prog[0] / prog[1] * 100) if prog[1] else 0 %}
+        <a href="{{ url_for('course_detail', course_id=c.id) }}" class="lesson-card">
+            <div class="lesson-level">
+                {% if c.exam %}{{ c.exam }}{% else %}{{ c.category }}{% endif %}
+            </div>
+            <div class="lesson-title">{{ c.name[ui_lang] }}</div>
+            <div class="lesson-count">
+                {{ prog[0] }} / {{ prog[1] }} words learned
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" data-width="{{ pct }}"></div>
+            </div>
+        </a>
+    {% endfor %}
+</div>
+
+{% endblock %}

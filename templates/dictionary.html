@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h1>{{ t.dictionary }}</h1>
+<p class="subtitle">{{ t.browse_words }}</p>
+
+<form method="GET" action="{{ url_for('dictionary') }}" class="search-form">
+    <input type="text" name="q" value="{{ query or '' }}"
+           placeholder="{{ t.search_placeholder }}" autocomplete="off">
+    <button type="submit" class="btn-search">🔍 {{ t.search }}</button>
+    {% if query %}
+        <a href="{{ url_for('dictionary') }}" class="btn-clear">✕ {{ t.clear_search }}</a>
+    {% endif %}
+</form>
+
+{% if results is not none %}
+    <h2 class="course-header">{{ t.search_results }} ({{ results|length }})</h2>
+    {% if results %}
+        <div class="dict-grid">
+            {% for r in results %}
+                <div class="dict-card">
+                    <div class="dict-course">{{ r.course.name[ui_lang] }}</div>
+                    <div class="dict-word">{{ r.word[learn] }}</div>
+                    {% set rom = r.word.get(learn ~ '_rom') %}
+                    {% if rom %}<div class="romaji">{{ rom }}</div>{% endif %}
+                    <div class="dict-translation">{{ r.word[base] }}</div>
+                    <div class="word-actions">
+                        <button class="btn-speak"
+                                data-text="{{ r.word[learn] }}"
+                                data-lang="{{ SPEECH_LANGS[learn] }}"
+                                onclick="speakFromButton(this)"
+                                title="Pronounce">🔊</button>
+                        <form method="POST" action="{{ url_for('add_from_bank') }}" class="form-grow">
+                            <input type="hidden" name="word" value="{{ r.word[learn] }}">
+                            <input type="hidden" name="translation" value="{{ r.word[base] }}">
+                            <input type="hidden" name="language" value="{{ learn }}">
+                            <input type="hidden" name="base_language" value="{{ base }}">
+                            <button class="btn-small" type="submit">➕ {{ t.add }}</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="empty">{{ t.no_results }}</p>
+    {% endif %}
+{% else %}
+    <div class="course-filter">
+        <a href="{{ url_for('set_course', course_id='all') }}"
+           class="pill {% if course_id == 'all' %}active{% endif %}">
+            🌍 {{ t.all_courses }}
+        </a>
+        {% for c in COURSES %}
+            <a href="{{ url_for('set_course', course_id=c.id) }}"
+               class="pill {% if course_id == c.id %}active{% endif %}">
+                {{ c.name[ui_lang] }}
+            </a>
+        {% endfor %}
+    </div>
+
+    {% for course in courses %}
+        <h2 class="course-header">{{ course.name[ui_lang] }}</h2>
+        {% for topic in course.topics %}
+            <div class="topic-block">
+                <h3>{{ topic.topic[ui_lang] }}</h3>
+                <div class="dict-grid">
+                    {% for w in topic.words %}
+                        <div class="dict-card">
+                            <div class="dict-word">{{ w[learn] }}</div>
+                            {% set rom = w.get(learn ~ '_rom') %}
+                            {% if rom %}<div class="romaji">{{ rom }}</div>{% endif %}
+                            <div class="dict-translation">{{ w[base] }}</div>
+                            <div class="word-actions">
+                                <button class="btn-speak"
+                                        data-text="{{ w[learn] }}"
+                                        data-lang="{{ SPEECH_LANGS[learn] }}"
+                                        onclick="speakFromButton(this)"
+                                        title="Pronounce">🔊</button>
+                                <form method="POST" action="{{ url_for('add_from_bank') }}" class="form-grow">
+                                    <input type="hidden" name="word" value="{{ w[learn] }}">
+                                    <input type="hidden" name="translation" value="{{ w[base] }}">
+                                    <input type="hidden" name="language" value="{{ learn }}">
+                                    <input type="hidden" name="base_language" value="{{ base }}">
+                                    <button class="btn-small" type="submit">➕ {{ t.add }}</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    {% endfor %}
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<a href="{{ url_for('lessons') }}" class="back-link">← {{ t.back }}</a>
+<h1>{{ lesson.title[ui_lang] }}</h1>
+<p class="subtitle">{{ topic.topic[ui_lang] }} · {{ lesson.level }}</p>
+
+<div class="dict-grid">
+    {% for w in topic.words %}
+        <div class="dict-card">
+            <div class="dict-word">{{ w[learn] }}</div>
+            {% set rom = w.get(learn ~ '_rom') %}
+            {% if rom %}<div class="romaji">{{ rom }}</div>{% endif %}
+            <div class="dict-translation">{{ w[base] }}</div>
+            <div class="word-actions">
+                <button class="btn-speak"
+                        data-text="{{ w[learn] }}"
+                        data-lang="{{ SPEECH_LANGS[learn] }}"
+                        onclick="speakFromButton(this)"
+                        title="Pronounce">🔊</button>
+                <form method="POST" action="{{ url_for('add_from_bank') }}" class="form-grow">
+                    <input type="hidden" name="word" value="{{ w[learn] }}">
+                    <input type="hidden" name="translation" value="{{ w[base] }}">
+                    <input type="hidden" name="language" value="{{ learn }}">
+                    <input type="hidden" name="base_language" value="{{ base }}">
+                    <button class="btn-small" type="submit">➕ {{ t.add }}</button>
+                </form>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

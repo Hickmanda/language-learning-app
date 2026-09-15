@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<a href="{{ url_for('course_detail', course_id=course.id) }}" class="back-link">← {{ t.back }}</a>
+<h1>{{ course.name[ui_lang] }} — {{ t.videos }}</h1>
+
+{% if course.video_url %}
+    <div class="video-container">
+        <iframe width="100%" height="500"
+                src="{{ course.video_url }}"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen>
+        </iframe>
+    </div>
+{% endif %}
+
+<h2 class="course-header">{{ t.topics }}</h2>
+<div class="lesson-grid">
+    {% for topic in course.topics %}
+        {% set query_en = topic.topic.get('en', '') %}
+        <a class="lesson-card"
+           href="https://www.youtube.com/results?search_query={{ query_en | urlencode }}+{{ course.target_lang }}"
+           target="_blank" rel="noopener">
+            <div class="lesson-level">▶ YouTube</div>
+            <div class="lesson-title">{{ topic.topic[ui_lang] }}</div>
+            <div class="lesson-count">{{ query_en }}</div>
+        </a>
+    {% endfor %}
+</div>
+
+<p class="subtitle video-tip">
+    💡 Tip: if the playlist above doesn't load, click a topic card to search YouTube directly.
+</p>
+
+{% endblock %}

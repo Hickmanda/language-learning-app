@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="{{ ui_lang }}" data-theme="{{ theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t.app_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header>
+    <div class="logo">🌍 {{ t.app_name }}</div>
+    <div class="header-controls">
+
+        {% if user %}
+            <span class="user-badge">👤 {{ user.username }}</span>
+            <a href="{{ url_for('logout') }}" class="btn-small btn-inline-sm">Sign out</a>
+        {% else %}
+            <a href="{{ url_for('login') }}" class="btn-small btn-inline-sm">Sign in</a>
+            <a href="{{ url_for('register') }}" class="btn-small btn-inline-sm btn-accent">Register</a>
+        {% endif %}
+
+        <label class="control">
+            <span>{{ t.ui_language }}</span>
+            <select onchange="window.location.href=this.value">
+                {% for code, info in LANGUAGES.items() %}
+                    <option value="{{ url_for('set_ui_lang', code=code) }}"
+                            {% if code == ui_lang %}selected{% endif %}>
+                        {{ info.code }} — {{ info.native }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <a href="{{ url_for('toggle_theme') }}" class="theme-toggle" title="{{ t.settings }}">
+            {% if theme == 'dark' %}☀️{% else %}🌙{% endif %}
+        </a>
+    </div>
+</header>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-area">
+            {% for category, msg in messages %}
+                <div class="flash flash-{{ category }}">{{ msg }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<nav>
+    <a href="{{ url_for('index') }}">🏠 {{ t.home }}</a>
+    <a href="{{ url_for('add') }}">➕ {{ t.add_card }}</a>
+    <a href="{{ url_for('quiz') }}">🎯 {{ t.quiz }}</a>
+    <a href="{{ url_for('dictionary') }}">📖 {{ t.dictionary }}</a>
+    <a href="{{ url_for('courses') }}">📚 {{ t.courses }}</a>
+    <a href="{{ url_for('lessons') }}">🎓 {{ t.lessons }}</a>
+    <a href="{{ url_for('stats') }}">📊 {{ t.stats }}</a>
+</nav>
+
+<div class="learning-bar">
+    <label class="control">
+        <span>{{ t.learning_language }}</span>
+        <select onchange="window.location.href=this.value">
+            {% for code, info in LANGUAGES.items() %}
+                <option value="{{ url_for('set_learn_lang', code=code) }}"
+                        {% if code == learn_lang %}selected{% endif %}>
+                    {{ info.code }} — {{ info.native }}
+                </option>
+            {% endfor %}
+        </select>
+    </label>
+    <label class="control">
+        <span>{{ t.base_language }}</span>
+        <select onchange="window.location.href=this.value">
+            {% for code, info in LANGUAGES.items() %}
+                <option value="{{ url_for('set_base_lang', code=code) }}"
+                        {% if code == base_lang %}selected{% endif %}>
+                    {{ info.code }} — {{ info.native }}
+                </option>
+            {% endfor %}
+        </select>
+    </label>
+</div>
+
+<main>
+    {% block content %}{% endblock %}
+</main>
+
+<!-- ============================================================
+     Progress bars — apply widths computed server-side
+     ============================================================ -->
+<script>
+document.querySelectorAll('.progress-fill[data-width]').forEach(function (el) {
+    var w = parseFloat(el.dataset.width) || 0;
+    if (w < 0) w = 0;
+    if (w > 100) w = 100;
+    el.style.width = w + '%';
+});
+</script>
+
+<!-- ============================================================
+     TEXT-TO-SPEECH
+     1. Local browser voice (best, offline).
+     2. Baidu TTS — works inside China.
+     3. Google TTS — works outside China.
+     ============================================================ -->
+<script>
+(function () {
+    'use strict';
+
+    var BAIDU_CODE = {
+        'en': 'EN', 'ru': 'RU', 'zh': 'ZH', 'ja': 'JAP',
+        'es': 'SPA', 'fr': 'FRA', 'de': 'DE', 'it': 'IT'
+    };
+
+    function findVoice(langCode) {
+        if (!('speechSynthesis' in window)) return null;
+        var voices = window.speechSynthesis.getVoices() || [];
+        var target = (langCode || 'en-US').toLowerCase();
+        var primary = target.split('-')[0];
+        var v = voices.find(function (x) { return x.lang.toLowerCase() === target; });
+        if (v) return v;
+        v = voices.find(function (x) { return x.lang.toLowerCase().indexOf(primary + '-') === 0; });
+        if (v) return v;
+        v = voices.find(function (x) { return x.lang.toLowerCase().indexOf(primary) === 0; });
+        return v || null;
+    }
+
+    function speakBaidu(text, langCode) {
+        var short = (langCode || 'en-US').split('-')[0].toLowerCase();
+        var bcode = BAIDU_CODE[short];
+        if (!bcode) return false;
+        var url = 'https://tts.baidu.com/text2audio?tex=' + encodeURIComponent(text)
+                + '&lan=' + bcode + '&cuid=baike&ctp=1&pdt=301&vol=9&rate=32&per=0';
+        var audio = new Audio(url);
+        var p = audio.play();
+        if (p && p.catch) p.catch(function () { speakGoogle(text, langCode); });
+        return true;
+    }
+
+    function speakGoogle(text, langCode) {
+        var short = (langCode || 'en-US').split('-')[0].toLowerCase();
+        var url = 'https://translate.google.com/translate_tts?ie=UTF-8&q='
+                + encodeURIComponent(text) + '&tl=' + short + '&client=tw-ob';
+        var audio = new Audio(url);
+        var p = audio.play();
+        if (p && p.catch) p.catch(function () {
+            alert('Pronunciation for "' + short + '" is not available.\n' +
+                  'Install a voice in Windows Settings → Time & Language → Speech.');
+        });
+    }
+
+    window.speak = function (text, langCode) {
+        if (!text) return;
+        langCode = langCode || 'en-US';
+        var voice = findVoice(langCode);
+        if (voice) {
+            try { window.speechSynthesis.cancel(); } catch (e) {}
+            var u = new SpeechSynthesisUtterance(text);
+            u.lang = voice.lang; u.voice = voice;
+            u.rate = 0.9; u.pitch = 1; u.volume = 1;
+            u.onerror = function () {
+                if (!speakBaidu(text, langCode)) speakGoogle(text, langCode);
+            };
+            window.speechSynthesis.speak(u);
+        } else {
+            if (!speakBaidu(text, langCode)) speakGoogle(text, langCode);
+        }
+    };
+
+    window.speakFromButton = function (btn) {
+        window.speak(btn.dataset.text, btn.dataset.lang);
+    };
+})();
+</script>
+
+</body>
+</html>

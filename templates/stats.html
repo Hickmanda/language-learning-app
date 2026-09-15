@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h1>{{ t.stats }}</h1>
+
+<div class="stats-grid">
+    <div class="stat-box">
+        <div class="stat-num">{{ total }}</div>
+        <div class="stat-label">{{ t.total }}</div>
+    </div>
+    <div class="stat-box green">
+        <div class="stat-num">{{ known }}</div>
+        <div class="stat-label">{{ t.learned }}</div>
+    </div>
+    <div class="stat-box orange">
+        <div class="stat-num">{{ unknown }}</div>
+        <div class="stat-label">{{ t.remaining }}</div>
+    </div>
+</div>
+
+{% endblock %}
