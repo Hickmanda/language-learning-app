@@ -3,34 +3,43 @@
 
 <a href="{{ url_for('course_detail', course_id=course.id) }}" class="back-link">← {{ t.back }}</a>
 <h1>{{ course.name[ui_lang] }} — {{ t.videos }}</h1>
+<p class="subtitle">
+    Choose a topic below to search for video lessons on YouTube.
+</p>
 
-{% if course.video_url %}
-    <div class="video-container">
-        <iframe width="100%" height="500"
-                src="{{ course.video_url }}"
-                frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen>
-        </iframe>
-    </div>
-{% endif %}
-
-<h2 class="course-header">{{ t.topics }}</h2>
-<div class="lesson-grid">
+<!-- ============================================================
+     Topic cards — each opens a YouTube search for this specific topic.
+     This approach never breaks, because we don't rely on a
+     hard-coded playlist ID that YouTube might delete.
+     ============================================================ -->
+<div class="video-topic-grid">
     {% for topic in course.topics %}
-        {% set query_en = topic.topic.get('en', '') %}
-        <a class="lesson-card"
-           href="https://www.youtube.com/results?search_query={{ query_en | urlencode }}+{{ course.target_lang }}"
+        {% set topic_en = topic.topic.get('en', '') %}
+        {% set search_query = topic_en + ' ' + (course.name.get('en', '') | replace(' (', ' ') | replace(')', '')) %}
+        <a class="video-topic-card"
+           href="https://www.youtube.com/results?search_query={{ search_query | urlencode }}"
            target="_blank" rel="noopener">
-            <div class="lesson-level">▶ YouTube</div>
-            <div class="lesson-title">{{ topic.topic[ui_lang] }}</div>
-            <div class="lesson-count">{{ query_en }}</div>
+            <div class="video-icon">▶</div>
+            <div class="video-topic-title">{{ topic.topic[ui_lang] }}</div>
+            <div class="video-topic-desc">{{ topic_en }}</div>
+            <div class="video-topic-count">{{ topic.words|length }} words</div>
         </a>
     {% endfor %}
 </div>
 
-<p class="subtitle video-tip">
-    💡 Tip: if the playlist above doesn't load, click a topic card to search YouTube directly.
-</p>
+<!-- ============================================================
+     Direct search button — for the whole course
+     ============================================================ -->
+<div class="video-search-box">
+    <p class="subtitle">
+        Or search the whole course on YouTube:
+    </p>
+    <a class="btn-primary"
+       href="https://www.youtube.com/results?search_query={{ (course.name.get('en', '') + ' lessons') | urlencode }}"
+       target="_blank" rel="noopener"
+       style="display:inline-block; width:auto;">
+        🔍 Search "{{ course.name[ui_lang] }}" on YouTube
+    </a>
+</div>
 
 {% endblock %}
