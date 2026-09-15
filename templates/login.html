@@ -1,20 +1,35 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<h1>Sign in</h1>
+<h1>{{ t.sign_in if t.sign_in else 'Sign in' }}</h1>
 
-<form method="POST" class="form-card">
-    <label>Username or email:</label>
-    <input type="text" name="login" required>
+<div class="form-card">
+    <form method="POST" action="{{ url_for('login') }}">
 
-    <label>Password:</label>
-    <input type="password" name="password" required>
+        <label for="username">Username or email:</label>
+        <input type="text"
+               id="username"
+               name="username"
+               autocomplete="username"
+               required
+               autofocus>
 
-    <button type="submit" class="btn-primary">Sign in</button>
-</form>
+        <label for="password">Password:</label>
+        <input type="password"
+               id="password"
+               name="password"
+               autocomplete="current-password"
+               required>
 
-<p style="margin-top:14px; color:var(--text-secondary);">
-    Don't have an account? <a href="{{ url_for('register') }}">Register</a>
-</p>
+        <button type="submit" class="btn-primary">Sign in</button>
+    </form>
+
+    <p style="margin-top: 16px; font-size: 14px; color: var(--text-secondary);">
+        Don't have an account?
+        <a href="{{ url_for('register') }}" style="color: var(--accent);">
+            Register
+        </a>
+    </p>
+</div>
 
 {% endblock %}
