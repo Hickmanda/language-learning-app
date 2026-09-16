@@ -178,5 +178,5 @@ language-learning-app/
 
 ## 📬 Contact
 
-**Author:** Hickmanda
+**Author:** Daniil Marchici
 **GitHub:** [@Hickmanda](https://github.com/Hickmanda)
